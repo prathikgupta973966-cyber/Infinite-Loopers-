@@ -1,2 +1,229 @@
-# Infinite-Loopers-
-Repository I have created this for the Trae hackathon which is going to be held in Presidency University on 4th March 2026.
+import streamlit as st
+import pandas as pd
+import datetime
+import plotly.express as px
+import time
+import random
+
+st.set_page_config(page_title="SmartStudy OS", layout="wide")
+
+# -------------------- SESSION STORAGE --------------------
+
+if "study_data" not in st.session_state:
+    st.session_state.study_data = []
+
+if "completed_topics" not in st.session_state:
+    st.session_state.completed_topics = []
+
+# -------------------- TITLE --------------------
+
+st.title("🎓 SmartStudy OS")
+st.caption("AI Powered Productivity Dashboard")
+
+# -------------------- SIDEBAR --------------------
+
+menu = st.sidebar.radio(
+"Navigation",
+[
+"Dashboard",
+"Study Planner",
+"Progress Tracker",
+"Analysis Graph",
+"Weak / Strong Analysis",
+"Pomodoro Timer",
+"Motivation",
+"Final Report"
+]
+)
+
+# ================= DASHBOARD =================
+
+if menu == "Dashboard":
+
+    st.subheader("📊 Dashboard")
+
+    total_topics = len(st.session_state.completed_topics)
+    total_hours = sum([d["Hours"] for d in st.session_state.study_data]) if st.session_state.study_data else 0
+
+    col1,col2 = st.columns(2)
+
+    col1.metric("Topics Studied", total_topics)
+    col2.metric("Total Study Hours", total_hours)
+
+    st.info("Plan your study using Study Planner.")
+
+# ================= STUDY PLANNER =================
+
+elif menu == "Study Planner":
+
+    st.subheader("📚 Study Planner")
+
+    subject = st.selectbox(
+    "Select Subject",
+    ["Math","Physics","Chemistry","Programming","Electronics"]
+    )
+
+    topic = st.text_input("Enter Topic")
+
+    hours = st.number_input("Study Hours",1,10)
+
+    if st.button("Add Study Record"):
+
+        record = {
+        "Subject":subject,
+        "Topic":topic,
+        "Hours":hours,
+        "Date":datetime.date.today()
+        }
+
+        st.session_state.study_data.append(record)
+
+        st.success("Topic Added")
+
+# ================= PROGRESS TRACKER =================
+
+elif menu == "Progress Tracker":
+
+    st.subheader("📈 Progress Tracker")
+
+    if st.session_state.study_data:
+
+        df = pd.DataFrame(st.session_state.study_data)
+
+        st.dataframe(df)
+
+        topic_done = st.selectbox(
+        "Mark Topic Completed",
+        df["Topic"].unique()
+        )
+
+        if st.button("Mark Completed"):
+
+            st.session_state.completed_topics.append(topic_done)
+
+            st.success("Topic Completed")
+
+    else:
+        st.warning("No study records yet")
+
+# ================= ANALYSIS GRAPH =================
+
+elif menu == "Analysis Graph":
+
+    st.subheader("📊 Study Analysis")
+
+    if st.session_state.study_data:
+
+        df = pd.DataFrame(st.session_state.study_data)
+
+        fig = px.bar(
+        df,
+        x="Subject",
+        y="Hours",
+        color="Subject",
+        title="Study Hours Per Subject"
+        )
+
+        st.plotly_chart(fig,use_container_width=True)
+
+    else:
+        st.warning("Add study data first")
+
+# ================= WEAK STRONG ANALYSIS =================
+
+elif menu == "Weak / Strong Analysis":
+
+    st.subheader("📉 Weak & Strong Subjects")
+
+    if st.session_state.study_data:
+
+        df = pd.DataFrame(st.session_state.study_data)
+
+        subject_hours = df.groupby("Subject")["Hours"].sum()
+
+        strong = subject_hours.idxmax()
+        weak = subject_hours.idxmin()
+
+        st.success(f"Strong Subject: {strong}")
+        st.error(f"Weak Subject: {weak}")
+
+    else:
+        st.warning("No data yet")
+
+# ================= POMODORO TIMER =================
+
+elif menu == "Pomodoro Timer":
+
+    st.subheader("⏱ Pomodoro Timer")
+
+    minutes = st.slider("Focus Minutes",15,60,25)
+
+    if st.button("Start Timer"):
+
+        total = minutes*60
+
+        progress = st.progress(0)
+        timer = st.empty()
+
+        for i in range(total):
+
+            remain = total-i
+
+            m = remain//60
+            s = remain%60
+
+            timer.metric("Time Remaining",f"{m}:{s:02}")
+
+            progress.progress(i/total)
+
+            time.sleep(1)
+
+        st.success("Focus Session Complete")
+
+# ================= MOTIVATION =================
+
+elif menu == "Motivation":
+
+    quotes = [
+
+    "Consistency beats motivation",
+    "Small progress every day",
+    "Focus creates success",
+    "Study today lead tomorrow",
+    "Your future self will thank you"
+    ]
+
+    st.subheader("💡 Motivation")
+
+    st.success(random.choice(quotes))
+
+# ================= FINAL REPORT =================
+
+elif menu == "Final Report":
+
+    st.subheader("📑 Final Study Report")
+
+    if st.session_state.study_data:
+
+        df = pd.DataFrame(st.session_state.study_data)
+
+        st.dataframe(df)
+
+        total_hours = df["Hours"].sum()
+        total_topics = len(df)
+
+        st.metric("Total Topics Studied",total_topics)
+        st.metric("Total Study Hours",total_hours)
+
+        subject_summary = df.groupby("Subject")["Hours"].sum()
+
+        fig = px.pie(
+        values=subject_summary.values,
+        names=subject_summary.index,
+        title="Subject Study Distribution"
+        )
+
+        st.plotly_chart(fig)
+
+    else:
+        st.warning("No study records yet")
